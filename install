@@ -1,0 +1,38 @@
+#!/bin/bash
+
+# is root?
+if [[ "$EUID" != "0" ]]; then
+  echo 'Script must run as root (better run with sudo).'
+  exit 1
+fi
+
+
+XBACKLIGHT_PATH=$(which xbacklight)
+
+# backup original xbacklight
+if [ -e "$XBACKLIGHT_PATH" ]; then
+  mv -f "$XBACKLIGHT_PATH" "${XBACKLIGHT_PATH}.original"
+  echo "NOTICE: original xbacklight can be found at ${XBACKLIGHT_PATH}.original"
+else
+  XBACKLIGHT_PATH=/usr/bin/xbacklight
+fi
+
+# copy new files
+cp -f ./xbacklight "$XBACKLIGHT_PATH"
+cp -f ./90-backlight.rules /etc/udev/rules.d/90-backlight.rules
+
+# set permissions
+chmod +x "$XBACKLIGHT_PATH"
+/bin/chgrp video /sys/class/backlight/*/brightness
+/bin/chmod g+w /sys/class/backlight/*/brightness
+
+# add your current user to "video" group
+if [ "$SUDO_USER" ];then
+  usermod -a -G video "$SUDO_USER"
+else
+  echo "Please notice you must add your users to the video group."
+  echo "you may do so using usermod -a -G video <username>"
+fi
+
+echo "Done."
+echo "to complete installation please reboot or at least logout."
